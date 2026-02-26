@@ -88,3 +88,15 @@ def summarize_best_match_coverage(records):
 
     total = len(records)
     return {"total": total, "matched": matched, "coverage": round(matched / total, 4)}
+
+
+def summarize_similarity_scores(pairs):
+    """Average and max similarity for name pairs."""
+    if not pairs:
+        return {"total": 0, "avgSimilarity": 0.0, "maxSimilarity": 0.0}
+    scores = [score_name_similarity(a, b) for a, b in pairs]
+    return {
+        "total": len(scores),
+        "avgSimilarity": round(sum(scores) / len(scores), 4),
+        "maxSimilarity": max(scores),
+    }
