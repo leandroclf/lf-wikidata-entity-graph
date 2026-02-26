@@ -50,9 +50,27 @@ def test_is_match_above_threshold():
 
 
 from backend.src.api import build_match_decision
+from backend.src.api import summarize_threshold_outcomes
 
 
 def test_build_match_decision():
     d = build_match_decision(0.82, 0.8)
     assert d["match"] is True
     assert d["threshold"] == 0.8
+
+
+def test_summarize_threshold_outcomes():
+    out = summarize_threshold_outcomes([0.79, 0.8, 0.91, 0.1], threshold=0.8)
+    assert out == {
+        "threshold": 0.8,
+        "total": 4,
+        "passed": 2,
+        "failed": 2,
+        "passRate": 0.5,
+    }
+
+
+def test_summarize_threshold_outcomes_empty():
+    out = summarize_threshold_outcomes([], threshold=0.8)
+    assert out["total"] == 0
+    assert out["passRate"] == 0.0

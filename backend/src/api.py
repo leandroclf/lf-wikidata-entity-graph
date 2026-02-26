@@ -56,3 +56,20 @@ def is_match_above_threshold(score, threshold=0.8):
 def build_match_decision(score, threshold=0.8):
     ok = is_match_above_threshold(score, threshold)
     return {"score": float(score), "threshold": float(threshold), "match": ok}
+
+
+def summarize_threshold_outcomes(scores, threshold=0.8):
+    """Aggregate pass/fail counts for a threshold decision."""
+    if not scores:
+        return {"threshold": float(threshold), "total": 0, "passed": 0, "failed": 0, "passRate": 0.0}
+
+    total = len(scores)
+    passed = sum(1 for s in scores if is_match_above_threshold(s, threshold))
+    failed = total - passed
+    return {
+        "threshold": float(threshold),
+        "total": total,
+        "passed": passed,
+        "failed": failed,
+        "passRate": round(passed / total, 4),
+    }
