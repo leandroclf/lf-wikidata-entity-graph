@@ -31,3 +31,11 @@ def test_choose_best_match():
     c = [{"id":"a","score":0.71},{"id":"b","score":0.89}]
     best = choose_best_match(c)
     assert best["id"] == "b"
+
+
+from backend.src.api import score_name_similarity
+
+
+def test_score_name_similarity():
+    assert score_name_similarity("ACME Corp", "Acme Corporation") > 0.3
+    assert score_name_similarity("Foo", "Bar") == 0.0

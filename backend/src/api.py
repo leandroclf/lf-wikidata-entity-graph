@@ -33,3 +33,15 @@ def choose_best_match(candidates):
     if not candidates:
         return None
     return max(candidates, key=lambda c: c.get("score", 0))
+
+
+
+def score_name_similarity(a, b):
+    na = normalize_entity_name(a)
+    nb = normalize_entity_name(b)
+    if not na or not nb:
+        return 0.0
+    aset, bset = set(na.split()), set(nb.split())
+    inter = len(aset & bset)
+    union = len(aset | bset)
+    return round(inter / union, 4) if union else 0.0
