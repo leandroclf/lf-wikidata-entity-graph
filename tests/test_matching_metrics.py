@@ -47,3 +47,12 @@ from backend.src.api import is_match_above_threshold
 def test_is_match_above_threshold():
     assert is_match_above_threshold(0.81) is True
     assert is_match_above_threshold(0.79) is False
+
+
+from backend.src.api import build_match_decision
+
+
+def test_build_match_decision():
+    d = build_match_decision(0.82, 0.8)
+    assert d["match"] is True
+    assert d["threshold"] == 0.8

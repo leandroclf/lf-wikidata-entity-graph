@@ -50,3 +50,9 @@ def score_name_similarity(a, b):
 
 def is_match_above_threshold(score, threshold=0.8):
     return float(score) >= float(threshold)
+
+
+
+def build_match_decision(score, threshold=0.8):
+    ok = is_match_above_threshold(score, threshold)
+    return {"score": float(score), "threshold": float(threshold), "match": ok}
