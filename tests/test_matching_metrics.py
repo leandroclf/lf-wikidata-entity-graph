@@ -138,3 +138,24 @@ def test_calculate_precision_delta():
 
 def test_calculate_precision_delta_zero_baseline():
     assert calculate_precision_delta(tp=10, fp=0, fn=0, baseline_precision=0) == 0.0
+
+
+def test_link_entities_empty():
+    from backend.src.api import link_entities_to_wikidata
+    result = link_entities_to_wikidata([])
+    assert result["stats"]["total"] == 0
+
+
+def test_link_entities_with_data():
+    from backend.src.api import link_entities_to_wikidata
+    entities = [{"name": "Microsoft Corporation"}, {"name": "X"}]
+    result = link_entities_to_wikidata(entities)
+    assert result["stats"]["total"] == 2
+    assert result["linked"][0]["_wikidata"]["linked"] == True
+
+
+def test_resolve_entity_aliases():
+    from backend.src.api import resolve_entity_aliases
+    aliases = {"IBM": ["International Business Machines"]}
+    resolved = resolve_entity_aliases("International Business Machines", aliases)
+    assert resolved["canonical"] == "IBM"
