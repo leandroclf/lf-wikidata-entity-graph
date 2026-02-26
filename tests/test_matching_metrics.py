@@ -54,6 +54,7 @@ from backend.src.api import summarize_threshold_outcomes
 from backend.src.api import summarize_best_match_coverage
 from backend.src.api import summarize_similarity_scores
 from backend.src.api import count_matches_above_threshold
+from backend.src.api import estimate_match_rate
 
 
 def test_build_match_decision():
@@ -113,3 +114,17 @@ def test_count_matches_above_threshold():
 
 def test_count_matches_above_threshold_empty():
     assert count_matches_above_threshold([], threshold=0.8) == {"threshold": 0.8, "total": 0, "passed": 0}
+
+
+def test_estimate_match_rate():
+    out = estimate_match_rate([
+        {"candidates": [{"id": "a", "score": 0.9}]},
+        {"candidates": [{"id": "b", "score": 0.6}]},
+        {"candidates": []},
+        {"candidates": [{"id": "c", "score": 0.85}]},
+    ])
+    assert out == 0.5
+
+
+def test_estimate_match_rate_empty():
+    assert estimate_match_rate([]) == 0.0

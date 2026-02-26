@@ -107,3 +107,15 @@ def count_matches_above_threshold(scores, threshold=0.8):
     total = len(scores or [])
     passed = sum(1 for s in (scores or []) if is_match_above_threshold(s, threshold))
     return {"threshold": float(threshold), "total": total, "passed": passed}
+
+
+def estimate_match_rate(records):
+    """Estimate share of records with a qualifying best match (score >= 0.8)."""
+    if not records:
+        return 0.0
+    matched = 0
+    for r in records:
+        best = choose_best_match(r.get("candidates", []))
+        if best and is_match_above_threshold(best.get("score", 0)):
+            matched += 1
+    return round(matched / len(records), 4)
