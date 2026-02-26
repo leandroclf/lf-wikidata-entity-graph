@@ -45,3 +45,8 @@ def score_name_similarity(a, b):
     inter = len(aset & bset)
     union = len(aset | bset)
     return round(inter / union, 4) if union else 0.0
+
+
+
+def is_match_above_threshold(score, threshold=0.8):
+    return float(score) >= float(threshold)

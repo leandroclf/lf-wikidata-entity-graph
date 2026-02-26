@@ -39,3 +39,11 @@ from backend.src.api import score_name_similarity
 def test_score_name_similarity():
     assert score_name_similarity("ACME Corp", "Acme Corporation") > 0.3
     assert score_name_similarity("Foo", "Bar") == 0.0
+
+
+from backend.src.api import is_match_above_threshold
+
+
+def test_is_match_above_threshold():
+    assert is_match_above_threshold(0.81) is True
+    assert is_match_above_threshold(0.79) is False
