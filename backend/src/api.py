@@ -25,3 +25,11 @@ def evaluate_match_quality(tp, fp, fn):
 
 def normalize_entity_name(name):
     return " ".join(str(name).strip().lower().split())
+
+
+
+def choose_best_match(candidates):
+    """Return candidate with highest score; None for empty list."""
+    if not candidates:
+        return None
+    return max(candidates, key=lambda c: c.get("score", 0))

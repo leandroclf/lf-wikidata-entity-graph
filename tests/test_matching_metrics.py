@@ -22,3 +22,12 @@ from backend.src.api import normalize_entity_name
 
 def test_normalize_entity_name():
     assert normalize_entity_name("  ACME   Corp ") == "acme corp"
+
+
+from backend.src.api import choose_best_match
+
+
+def test_choose_best_match():
+    c = [{"id":"a","score":0.71},{"id":"b","score":0.89}]
+    best = choose_best_match(c)
+    assert best["id"] == "b"
