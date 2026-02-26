@@ -73,3 +73,18 @@ def summarize_threshold_outcomes(scores, threshold=0.8):
         "failed": failed,
         "passRate": round(passed / total, 4),
     }
+
+
+def summarize_best_match_coverage(records):
+    """Share of records with an automatic best-match candidate."""
+    if not records:
+        return {"total": 0, "matched": 0, "coverage": 0.0}
+
+    matched = 0
+    for r in records:
+        best = choose_best_match(r.get("candidates", []))
+        if best is not None:
+            matched += 1
+
+    total = len(records)
+    return {"total": total, "matched": matched, "coverage": round(matched / total, 4)}

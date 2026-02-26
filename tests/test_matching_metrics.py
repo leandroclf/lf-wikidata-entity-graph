@@ -51,6 +51,7 @@ def test_is_match_above_threshold():
 
 from backend.src.api import build_match_decision
 from backend.src.api import summarize_threshold_outcomes
+from backend.src.api import summarize_best_match_coverage
 
 
 def test_build_match_decision():
@@ -74,3 +75,16 @@ def test_summarize_threshold_outcomes_empty():
     out = summarize_threshold_outcomes([], threshold=0.8)
     assert out["total"] == 0
     assert out["passRate"] == 0.0
+
+
+def test_summarize_best_match_coverage():
+    out = summarize_best_match_coverage([
+        {"candidates": [{"id": "a", "score": 0.7}, {"id": "b", "score": 0.9}]},
+        {"candidates": []},
+        {"candidates": [{"id": "c", "score": 0.6}]},
+    ])
+    assert out == {"total": 3, "matched": 2, "coverage": 0.6667}
+
+
+def test_summarize_best_match_coverage_empty():
+    assert summarize_best_match_coverage([]) == {"total": 0, "matched": 0, "coverage": 0.0}
