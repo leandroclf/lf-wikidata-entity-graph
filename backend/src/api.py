@@ -119,3 +119,11 @@ def estimate_match_rate(records):
         if best and is_match_above_threshold(best.get("score", 0)):
             matched += 1
     return round(matched / len(records), 4)
+
+
+def calculate_precision_delta(tp, fp, fn, baseline_precision):
+    """Return percentage-point delta vs baseline precision."""
+    if baseline_precision <= 0:
+        return 0.0
+    current = evaluate_match_quality(tp, fp, fn)["precision"]
+    return round((current - baseline_precision) * 100, 2)

@@ -55,6 +55,7 @@ from backend.src.api import summarize_best_match_coverage
 from backend.src.api import summarize_similarity_scores
 from backend.src.api import count_matches_above_threshold
 from backend.src.api import estimate_match_rate
+from backend.src.api import calculate_precision_delta
 
 
 def test_build_match_decision():
@@ -128,3 +129,12 @@ def test_estimate_match_rate():
 
 def test_estimate_match_rate_empty():
     assert estimate_match_rate([]) == 0.0
+
+
+def test_calculate_precision_delta():
+    delta = calculate_precision_delta(tp=18, fp=2, fn=4, baseline_precision=0.85)
+    assert delta == 5.0
+
+
+def test_calculate_precision_delta_zero_baseline():
+    assert calculate_precision_delta(tp=10, fp=0, fn=0, baseline_precision=0) == 0.0
