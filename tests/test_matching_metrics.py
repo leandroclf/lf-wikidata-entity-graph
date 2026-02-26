@@ -53,6 +53,7 @@ from backend.src.api import build_match_decision
 from backend.src.api import summarize_threshold_outcomes
 from backend.src.api import summarize_best_match_coverage
 from backend.src.api import summarize_similarity_scores
+from backend.src.api import count_matches_above_threshold
 
 
 def test_build_match_decision():
@@ -103,3 +104,12 @@ def test_summarize_similarity_scores():
 
 def test_summarize_similarity_scores_empty():
     assert summarize_similarity_scores([]) == {"total": 0, "avgSimilarity": 0.0, "maxSimilarity": 0.0}
+
+
+def test_count_matches_above_threshold():
+    out = count_matches_above_threshold([0.2, 0.8, 0.91], threshold=0.8)
+    assert out == {"threshold": 0.8, "total": 3, "passed": 2}
+
+
+def test_count_matches_above_threshold_empty():
+    assert count_matches_above_threshold([], threshold=0.8) == {"threshold": 0.8, "total": 0, "passed": 0}

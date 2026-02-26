@@ -100,3 +100,10 @@ def summarize_similarity_scores(pairs):
         "avgSimilarity": round(sum(scores) / len(scores), 4),
         "maxSimilarity": max(scores),
     }
+
+
+def count_matches_above_threshold(scores, threshold=0.8):
+    """Count how many similarity scores pass the match threshold."""
+    total = len(scores or [])
+    passed = sum(1 for s in (scores or []) if is_match_above_threshold(s, threshold))
+    return {"threshold": float(threshold), "total": total, "passed": passed}
