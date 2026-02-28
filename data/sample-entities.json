@@ -1,0 +1,39 @@
+{
+  "entities": [
+    {
+      "id": "e001",
+      "name": "Microsoft Corporation",
+      "aliases": ["Microsoft", "MSFT"],
+      "type": "company",
+      "domain": "technology"
+    },
+    {
+      "id": "e002",
+      "name": "International Business Machines",
+      "aliases": ["IBM", "Big Blue"],
+      "type": "company",
+      "domain": "technology"
+    },
+    {
+      "id": "e003",
+      "name": "Apple Inc.",
+      "aliases": ["Apple", "AAPL"],
+      "type": "company",
+      "domain": "technology"
+    },
+    {
+      "id": "e004",
+      "name": "Amazon.com, Inc.",
+      "aliases": ["Amazon", "AMZN"],
+      "type": "company",
+      "domain": "e-commerce"
+    },
+    {
+      "id": "e005",
+      "name": "Alphabet Inc.",
+      "aliases": ["Google", "GOOGL"],
+      "type": "company",
+      "domain": "technology"
+    }
+  ]
+}
