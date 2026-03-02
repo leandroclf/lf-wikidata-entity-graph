@@ -180,3 +180,25 @@ def resolve_entity_aliases(entity_name, known_aliases=None):
             return {"canonical": canonical, "input": entity_name, "matched": True}
     
     return {"canonical": entity_name, "input": entity_name, "matched": False}
+
+
+
+def summarize_link_confidence(linked_entities):
+    """Summarize confidence stats from linked entities payload."""
+    if not linked_entities:
+        return {"total": 0, "avgConfidence": 0.0, "linkedCount": 0}
+
+    confidences = []
+    linked_count = 0
+    for entity in linked_entities:
+        meta = entity.get("_wikidata", {})
+        conf = float(meta.get("confidence", 0.0))
+        confidences.append(conf)
+        if meta.get("linked") is True:
+            linked_count += 1
+
+    return {
+        "total": len(linked_entities),
+        "avgConfidence": round(sum(confidences) / len(confidences), 4),
+        "linkedCount": linked_count,
+    }

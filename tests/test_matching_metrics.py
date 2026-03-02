@@ -159,3 +159,21 @@ def test_resolve_entity_aliases():
     aliases = {"IBM": ["International Business Machines"]}
     resolved = resolve_entity_aliases("International Business Machines", aliases)
     assert resolved["canonical"] == "IBM"
+
+
+def test_summarize_link_confidence():
+    from backend.src.api import summarize_link_confidence
+
+    payload = [
+        {"name": "A", "_wikidata": {"linked": True, "confidence": 0.9}},
+        {"name": "B", "_wikidata": {"linked": False, "confidence": 0.6}},
+        {"name": "C", "_wikidata": {"linked": True, "confidence": 0.8}},
+    ]
+
+    out = summarize_link_confidence(payload)
+    assert out == {"total": 3, "avgConfidence": 0.7667, "linkedCount": 2}
+
+
+def test_summarize_link_confidence_empty():
+    from backend.src.api import summarize_link_confidence
+    assert summarize_link_confidence([]) == {"total": 0, "avgConfidence": 0.0, "linkedCount": 0}
