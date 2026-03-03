@@ -1,5 +1,5 @@
 from backend.src.api import get_matching_metrics, is_match_above_threshold, count_matches_above_threshold
-from backend.src.ingest import ingest_entities, validate_entity_record
+from backend.src.ingest import ingest_entities, validate_entity_record, process_entity_graph_pipeline
 
 
 def main():
@@ -23,6 +23,13 @@ def main():
     # Test validation
     validation = validate_entity_record({"id": "test", "name": "Valid"})
     assert validation["valid"] is True
+
+    pipeline = process_entity_graph_pipeline(
+        [{"id": "x1", "name": "ACME CORP"}, {"id": "x2", "name": "OpenAI"}],
+        confidence_threshold=0.7,
+    )
+    assert pipeline["stats"]["raw_total"] == 2
+    assert "baseline" in pipeline
     
     print("smoke-check:ok")
 
