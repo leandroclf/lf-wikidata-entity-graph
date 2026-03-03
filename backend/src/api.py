@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import hashlib
 
 def get_sample_payload():
     return {
@@ -129,6 +130,15 @@ def calculate_precision_delta(tp, fp, fn, baseline_precision):
     return round((current - baseline_precision) * 100, 2)
 
 
+def _deterministic_qid_from_name(name):
+    """Build a stable pseudo-QID from a normalized entity name."""
+    normalized = normalize_entity_name(name)
+    if not normalized:
+        return None
+    digest = hashlib.sha1(normalized.encode("utf-8")).hexdigest()
+    return f"Q{int(digest[:10], 16) % 1000000}"
+
+
 def link_entities_to_wikidata(entities, confidence_threshold=0.7):
     """
     Link business entities to Wikidata IDs based on name matching.
@@ -139,22 +149,23 @@ def link_entities_to_wikidata(entities, confidence_threshold=0.7):
     
     linked = []
     linked_count = 0
-    
+
     for entity in entities:
         name = entity.get("name", "")
         # Simulate Wikidata lookup with confidence scoring
         confidence = 0.0 if not name else min(0.9, len(name.strip()) / 20 + 0.5)
-        
+
+        is_linked = confidence >= confidence_threshold
         linked_entity = {
             **entity,
             "_wikidata": {
-                "linked": confidence >= confidence_threshold,
+                "linked": is_linked,
                 "confidence": round(confidence, 3),
-                "qid": f"Q{hash(name) % 1000000}" if confidence >= confidence_threshold else None
-            }
+                "qid": _deterministic_qid_from_name(name) if is_linked else None,
+            },
         }
         linked.append(linked_entity)
-        if confidence >= confidence_threshold:
+        if is_linked:
             linked_count += 1
     
     return {
