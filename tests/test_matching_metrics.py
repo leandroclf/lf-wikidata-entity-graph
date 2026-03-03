@@ -154,6 +154,25 @@ def test_link_entities_with_data():
     assert result["linked"][0]["_wikidata"]["linked"] == True
 
 
+def test_link_entities_respects_threshold_and_keeps_list_shape():
+    from backend.src.api import link_entities_to_wikidata
+
+    result = link_entities_to_wikidata([{"name": "X"}], confidence_threshold=0.9)
+    assert isinstance(result["linked"], list)
+    assert result["linked"][0]["_wikidata"]["linked"] is False
+    assert result["linked"][0]["_wikidata"]["qid"] is None
+
+
+def test_link_entities_qid_is_deterministic_and_normalized():
+    from backend.src.api import link_entities_to_wikidata
+
+    one = link_entities_to_wikidata([{"name": " ACME   CORP "}])["linked"][0]["_wikidata"]["qid"]
+    two = link_entities_to_wikidata([{"name": "acme corp"}])["linked"][0]["_wikidata"]["qid"]
+
+    assert one is not None
+    assert one == two
+
+
 def test_resolve_entity_aliases():
     from backend.src.api import resolve_entity_aliases
     aliases = {"IBM": ["International Business Machines"]}
