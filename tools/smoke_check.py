@@ -1,5 +1,14 @@
-from backend.src.api import get_matching_metrics, is_match_above_threshold, count_matches_above_threshold
-from backend.src.ingest import ingest_entities, validate_entity_record, process_entity_graph_pipeline
+from backend.src.api import (
+    count_matches_above_threshold,
+    get_matching_metrics,
+    is_match_above_threshold,
+)
+from backend.src.ingest import (
+    ingest_entities,
+    process_entity_graph_pipeline,
+    validate_entity_record,
+)
+
 
 def run_test(name, func):
     try:
@@ -13,51 +22,58 @@ def run_test(name, func):
         print(f"[ERROR] {name}: An unexpected error occurred - {e}")
         return False
 
+
+def test_get_matching_metrics():
+    metrics = get_matching_metrics()
+    assert metrics["issue"] == "ISSUE-002"
+    assert metrics["precisionTarget"] >= 0.9
+
+
+def test_is_match_above_threshold():
+    assert is_match_above_threshold(0.81) is True
+
+
+def test_count_matches_above_threshold():
+    assert count_matches_above_threshold([0.2, 0.8, 0.9])["passed"] == 2
+
+
+def test_ingest_entities():
+    test_records = [
+        {"id": "e1", "name": "Test Entity"},
+        {"id": "e2"},  # invalid - missing name
+    ]
+    result = ingest_entities(test_records)
+    assert result["stats"]["total"] == 2
+    assert result["stats"]["valid"] == 1
+    assert result["stats"]["invalid"] == 1
+
+
+def test_validate_entity_record():
+    validation = validate_entity_record({"id": "test", "name": "Valid"})
+    assert validation["valid"] is True
+
+
+def test_process_entity_graph_pipeline():
+    pipeline = process_entity_graph_pipeline(
+        [{"id": "x1", "name": "ACME CORP"}, {"id": "x2", "name": "OpenAI"}],
+        confidence_threshold=0.7,
+    )
+    assert pipeline["stats"]["raw_total"] == 2
+    assert "baseline" in pipeline
+
+
 def main():
     print("Starting smoke tests...")
-    results = []
+    tests = [
+        ("API: get_matching_metrics", test_get_matching_metrics),
+        ("API: is_match_above_threshold", test_is_match_above_threshold),
+        ("API: count_matches_above_threshold", test_count_matches_above_threshold),
+        ("Ingest: ingest_entities", test_ingest_entities),
+        ("Ingest: validate_entity_record", test_validate_entity_record),
+        ("Pipeline: process_entity_graph_pipeline", test_process_entity_graph_pipeline),
+    ]
 
-    # Test matching metrics
-    results.append(run_test("API: get_matching_metrics", lambda: (
-        metrics := get_matching_metrics(),
-        assert metrics["issue"] == "ISSUE-002",
-        assert metrics["precisionTarget"] >= 0.9
-    )))
-    results.append(run_test("API: is_match_above_threshold", lambda: (
-        assert is_match_above_threshold(0.81) is True
-    )))
-    results.append(run_test("API: count_matches_above_threshold", lambda: (
-        assert count_matches_above_threshold([0.2, 0.8, 0.9])["passed"] == 2
-    )))
-    
-    # Test ingest module
-    results.append(run_test("Ingest: ingest_entities", lambda: (
-        test_records := [
-            {"id": "e1", "name": "Test Entity"},
-            {"id": "e2"}  # invalid - missing name
-        ],
-        result := ingest_entities(test_records),
-        assert result["stats"]["total"] == 2,
-        assert result["stats"]["valid"] == 1,
-        assert result["stats"]["invalid"] == 1
-    )))
-    
-    # Test validation
-    results.append(run_test("Ingest: validate_entity_record", lambda: (
-        validation := validate_entity_record({"id": "test", "name": "Valid"}),
-        assert validation["valid"] is True
-    )))
-
-    # Test process_entity_graph_pipeline
-    results.append(run_test("Pipeline: process_entity_graph_pipeline", lambda: (
-        pipeline := process_entity_graph_pipeline(
-            [{"id": "x1", "name": "ACME CORP"}, {"id": "x2", "name": "OpenAI"}],
-            confidence_threshold=0.7,
-        ),
-        assert pipeline["stats"]["raw_total"] == 2,
-        assert "baseline" in pipeline
-    )))
-    
+    results = [run_test(name, fn) for name, fn in tests]
     passed_count = sum(results)
     total_count = len(results)
 
@@ -66,8 +82,8 @@ def main():
         print("smoke-check:ok")
     else:
         print(f"\nSmoke tests failed! ({passed_count}/{total_count} passed)")
-        # Exit with a non-zero status code to indicate failure in CI
         import sys
+
         sys.exit(1)
 
 
