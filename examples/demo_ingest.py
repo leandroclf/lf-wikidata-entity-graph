@@ -7,7 +7,12 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from backend.src.ingest import ingest_entities, load_entities_from_json, deduplicate_entities
+from backend.src.ingest import (
+    build_entity_graph,
+    deduplicate_entities,
+    ingest_entities,
+    load_entities_from_json,
+)
 from backend.src.api import link_entities_to_wikidata
 
 
@@ -47,6 +52,13 @@ def main():
     linked_result = link_entities_to_wikidata(unique[:3])  # Demo with first 3
     print(f"   Linked: {linked_result['stats']['linked_count']}/{linked_result['stats']['total']}")
     print(f"   Link Rate: {linked_result['stats']['link_rate'] * 100}%\n")
+
+    graph = build_entity_graph(linked_result["linked"])
+    print("5. Entity graph summary...")
+    print(f"   Entity nodes: {graph['stats']['entities']}")
+    print(f"   Alias nodes: {graph['stats']['aliases']}")
+    print(f"   Wikidata nodes: {graph['stats']['wikidata']}")
+    print(f"   Edges: {graph['stats']['edges']}\n")
     
     # Show example linked entity
     if linked_result['linked']:
