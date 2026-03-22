@@ -184,11 +184,25 @@ def resolve_entity_aliases(entity_name, known_aliases=None):
     Useful for matching variations like 'IBM' vs 'International Business Machines'.
     """
     aliases = known_aliases or {}
-    normalized = entity_name.strip().lower()
+    normalized_input = "" if entity_name is None else str(entity_name).strip().lower()
     
     for canonical, alias_list in aliases.items():
-        if normalized == canonical.lower() or normalized in [a.lower() for a in alias_list]:
+        canonical_text = "" if canonical is None else str(canonical).strip()
+        if not canonical_text:
+            continue
+
+        if normalized_input == canonical_text.lower():
             return {"canonical": canonical, "input": entity_name, "matched": True}
+
+        aliases_iterable = alias_list
+        if isinstance(aliases_iterable, str):
+            aliases_iterable = [aliases_iterable]
+
+        for alias in aliases_iterable or []:
+            if alias is None:
+                continue
+            if normalized_input == str(alias).strip().lower():
+                return {"canonical": canonical, "input": entity_name, "matched": True}
     
     return {"canonical": entity_name, "input": entity_name, "matched": False}
 

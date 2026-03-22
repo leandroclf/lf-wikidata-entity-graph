@@ -180,6 +180,19 @@ def test_resolve_entity_aliases():
     assert resolved["canonical"] == "IBM"
 
 
+def test_resolve_entity_aliases_handles_none_and_non_string_aliases():
+    from backend.src.api import resolve_entity_aliases
+
+    aliases = {"IBM": ["International Business Machines", None, 42]}
+
+    unresolved = resolve_entity_aliases(None, aliases)
+    assert unresolved["matched"] is False
+    assert unresolved["canonical"] is None
+
+    resolved = resolve_entity_aliases("International Business Machines", aliases)
+    assert resolved["canonical"] == "IBM"
+
+
 def test_summarize_link_confidence():
     from backend.src.api import summarize_link_confidence
 
