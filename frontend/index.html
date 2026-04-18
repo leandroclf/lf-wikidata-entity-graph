@@ -2,22 +2,384 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <title>lf-wikidata-entity-graph V0.3</title>
-  <style>body{font-family:Arial,sans-serif;padding:24px} pre{background:#f3f3f3;padding:12px;border-radius:8px}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>lf-wikidata-entity-graph — Entity Matching &amp; Graph Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --blue: #388bfd;
+      --blue-dim: #1f3a6e;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    a { color: var(--blue); }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+    header h1 { font-size: 1.1rem; font-weight: 600; }
+    header span { color: var(--muted); font-size: .85rem; }
+    .badge { background: var(--blue-dim); color: var(--blue); border-radius: 12px; padding: .15rem .6rem; font-size: .75rem; font-weight: 600; }
+    main { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+    section { margin-bottom: 2.5rem; }
+    h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: var(--text); }
+    h3 { font-size: 1rem; font-weight: 600; margin-bottom: .5rem; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; box-shadow: var(--shadow); }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+    label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: .3rem; }
+    input, select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: .5rem .75rem; font-size: .9rem; outline: none; }
+    input:focus, select:focus { border-color: var(--blue); }
+    .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem 1rem; border-radius: 6px; font-size: .9rem; font-weight: 600; cursor: pointer; border: none; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-danger { background: transparent; color: var(--red); border: 1px solid var(--border); font-size: .8rem; padding: .2rem .5rem; }
+    .form-row { display: flex; gap: .75rem; align-items: flex-end; margin-bottom: .75rem; }
+    .form-row .field { flex: 1; }
+    .result-box { margin-top: 1rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; font-size: .9rem; }
+    .result-box.match { border-color: var(--green); }
+    .result-box.no-match { border-color: var(--yellow); }
+    .score { font-size: 2rem; font-weight: 800; }
+    .score.high { color: var(--green); }
+    .score.low { color: var(--yellow); }
+    .verdict { font-weight: 700; font-size: 1rem; }
+    .verdict.match { color: var(--green); }
+    .verdict.no-match { color: var(--yellow); }
+    .candidate-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }
+    .candidate-row input[type=range] { flex: 1; }
+    .candidate-row .score-display { width: 3.5rem; text-align: right; font-size: .85rem; color: var(--muted); }
+    .candidates-list { margin-bottom: .75rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+    th { text-align: left; padding: .5rem .75rem; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+    td { padding: .5rem .75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    .node-entity { color: var(--blue); }
+    .node-alias { color: var(--muted); }
+    .node-wikidata { color: var(--green); }
+    .edge-row td { font-size: .8rem; color: var(--muted); }
+    .pill { display: inline-block; padding: .1rem .45rem; border-radius: 10px; font-size: .75rem; font-weight: 600; }
+    .pill-entity { background: var(--blue-dim); color: var(--blue); }
+    .pill-alias { background: #2d333b; color: var(--muted); }
+    .pill-wikidata { background: #1a3a25; color: var(--green); }
+    .stats-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: .5rem .9rem; }
+    .stat .num { font-size: 1.5rem; font-weight: 800; color: var(--blue); }
+    .stat .lbl { font-size: .75rem; color: var(--muted); }
+    .error { color: var(--red); font-size: .85rem; margin-top: .5rem; }
+    .tag-api { color: var(--green); font-size: .75rem; font-weight: 600; }
+    .tag-fallback { color: var(--yellow); font-size: .75rem; font-weight: 600; }
+    pre { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow: auto; font-size: .8rem; color: var(--muted); }
+    .section-desc { color: var(--muted); font-size: .9rem; margin-bottom: 1rem; }
+    [hidden] { display: none !important; }
+  </style>
 </head>
 <body>
-  <h1>lf-wikidata-entity-graph — V0.3</h1>
-  <p>Frontend consumindo endpoint <code>/sample</code> com fallback em arquivo local.</p>
-  <pre id="out">carregando...</pre>
-  <script>
-    const out = document.getElementById('out');
-    fetch('http://localhost:8000/sample')
-      .then(r => { if(!r.ok) throw new Error('http'); return r.json(); })
-      .then(d => out.textContent = JSON.stringify(d, null, 2))
-      .catch(() => fetch('../data/sample-output.json')
-        .then(r => r.json())
-        .then(d => out.textContent = JSON.stringify({fallback:true, ...d}, null, 2))
-        .catch(() => out.textContent = 'erro ao carregar dados'));
-  </script>
+<header>
+  <div>
+    <h1>lf-wikidata-entity-graph</h1>
+    <span>Resolução de entidades e linking com Wikidata</span>
+  </div>
+  <span class="badge">v0.3</span>
+</header>
+
+<main>
+
+  <!-- Entity Matching Section -->
+  <section id="matching">
+    <h2>Entity Matching</h2>
+    <p class="section-desc">Informe um nome de entidade e candidatos com scores para ver a melhor correspondência.</p>
+    <div class="card">
+      <div class="form-row">
+        <div class="field">
+          <label for="entity-name">Nome da Entidade</label>
+          <input id="entity-name" type="text" value="International Business Machines" placeholder="Ex: IBM Corporation" />
+        </div>
+      </div>
+
+      <h3 style="margin-bottom:.5rem">Candidatos</h3>
+      <div class="candidates-list" id="candidates-list">
+        <!-- populated by JS -->
+      </div>
+      <button class="btn btn-secondary" onclick="addCandidate()" style="margin-bottom:1rem">+ Adicionar candidato</button>
+
+      <div style="display:flex;gap:.75rem;align-items:center">
+        <button class="btn btn-primary" onclick="runMatch()">Analisar Matching</button>
+        <span id="match-source" style="font-size:.8rem"></span>
+      </div>
+
+      <div id="match-result" hidden class="result-box">
+        <div style="margin-bottom:.5rem"><strong>Melhor candidato:</strong> <span id="match-best-name"></span></div>
+        <div style="margin-bottom:.75rem"><strong>Score do candidato:</strong> <span id="match-best-score"></span></div>
+        <div class="score" id="match-score-display"></div>
+        <div class="verdict" id="match-verdict"></div>
+        <div style="margin-top:.75rem;font-size:.8rem;color:var(--muted)" id="match-details"></div>
+      </div>
+      <div id="match-error" class="error" hidden></div>
+    </div>
+  </section>
+
+  <!-- Pipeline Section -->
+  <section id="pipeline">
+    <h2>Pipeline Completo</h2>
+    <p class="section-desc">Rode o pipeline de validação → deduplicação → linking Wikidata → grafo de entidades.</p>
+    <div class="card">
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">Usa 4 entidades de exemplo hardcoded. Se a API não responder, exibe resultado de demonstração.</p>
+      <div style="display:flex;gap:.75rem;align-items:center;margin-bottom:1rem">
+        <button class="btn btn-primary" onclick="runPipeline()" id="pipeline-btn">Rodar pipeline de exemplo</button>
+        <span id="pipeline-source" style="font-size:.8rem"></span>
+      </div>
+
+      <div id="pipeline-result" hidden>
+        <div class="stats-row" id="pipeline-stats"></div>
+
+        <h3 style="margin-bottom:.5rem">Entidades Vinculadas</h3>
+        <table id="entities-table" style="margin-bottom:1.25rem">
+          <thead><tr><th>Nome</th><th>QID</th><th>Confiança</th><th>Vinculada</th></tr></thead>
+          <tbody id="entities-tbody"></tbody>
+        </table>
+
+        <h3 style="margin-bottom:.5rem">Grafo: Nós</h3>
+        <table id="nodes-table" style="margin-bottom:1.25rem">
+          <thead><tr><th>ID</th><th>Tipo</th><th>Nome / QID</th></tr></thead>
+          <tbody id="nodes-tbody"></tbody>
+        </table>
+
+        <h3 style="margin-bottom:.5rem">Grafo: Arestas</h3>
+        <table id="edges-table">
+          <thead><tr><th>Origem</th><th>Relação</th><th>Destino</th></tr></thead>
+          <tbody id="edges-tbody"></tbody>
+        </table>
+      </div>
+      <div id="pipeline-error" class="error" hidden></div>
+    </div>
+  </section>
+
+  <!-- Metrics Section -->
+  <section id="metrics">
+    <h2>Métricas de Matching</h2>
+    <p class="section-desc">Objetivos de qualidade definidos para o projeto.</p>
+    <div class="card" id="metrics-card">
+      <button class="btn btn-secondary" onclick="loadMetrics()">Carregar métricas</button>
+      <div id="metrics-result" hidden style="margin-top:1rem">
+        <pre id="metrics-pre"></pre>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const API = 'http://localhost:8000';
+
+// --- Candidates UI ---
+let candidates = [
+  { name: 'IBM Corporation', score: 0.85 },
+  { name: 'Apple Inc', score: 0.40 },
+];
+
+function renderCandidates() {
+  const list = document.getElementById('candidates-list');
+  list.innerHTML = '';
+  candidates.forEach((c, i) => {
+    const row = document.createElement('div');
+    row.className = 'candidate-row';
+    row.innerHTML = `
+      <input type="text" value="${c.name}" placeholder="Nome do candidato" oninput="candidates[${i}].name=this.value" style="flex:2" />
+      <input type="range" min="0" max="1" step="0.01" value="${c.score}" oninput="candidates[${i}].score=parseFloat(this.value);this.nextElementSibling.textContent=parseFloat(this.value).toFixed(2)" />
+      <span class="score-display">${c.score.toFixed(2)}</span>
+      <button class="btn btn-danger" onclick="candidates.splice(${i},1);renderCandidates()">✕</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function addCandidate() {
+  candidates.push({ name: '', score: 0.5 });
+  renderCandidates();
+}
+
+renderCandidates();
+
+// --- Match ---
+async function runMatch() {
+  const entityName = document.getElementById('entity-name').value.trim();
+  const srcEl = document.getElementById('match-source');
+  const resultEl = document.getElementById('match-result');
+  const errorEl = document.getElementById('match-error');
+  resultEl.hidden = true;
+  errorEl.hidden = true;
+
+  try {
+    const res = await fetch(`${API}/v1/entities/match`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entity_name: entityName, candidates }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    srcEl.innerHTML = '<span class="tag-api">API ao vivo</span>';
+    showMatchResult(data);
+  } catch {
+    srcEl.innerHTML = '<span class="tag-fallback">Fallback estático</span>';
+    showMatchResult(fallbackMatch(entityName, candidates));
+  }
+}
+
+function fallbackMatch(entityName, cands) {
+  if (!cands.length) return { best_match: null, decision: { score: 0, threshold: 0.8, match: false } };
+  const best = cands.reduce((a, b) => (b.score > a.score ? b : a));
+  const na = entityName.toLowerCase().split(/\s+/);
+  const nb = (best.name || '').toLowerCase().split(/\s+/);
+  const setA = new Set(na), setB = new Set(nb);
+  const inter = [...setA].filter(x => setB.has(x)).length;
+  const union = new Set([...setA, ...setB]).size;
+  const score = union ? inter / union : 0;
+  return { best_match: best, decision: { score: parseFloat(score.toFixed(4)), threshold: 0.8, match: score >= 0.8 } };
+}
+
+function showMatchResult(data) {
+  const resultEl = document.getElementById('match-result');
+  const best = data.best_match;
+  const dec = data.decision || {};
+  document.getElementById('match-best-name').textContent = best ? best.name : '(nenhum)';
+  document.getElementById('match-best-score').textContent = best ? best.score : '-';
+  const scoreEl = document.getElementById('match-score-display');
+  const verdictEl = document.getElementById('match-verdict');
+  const score = dec.score || 0;
+  scoreEl.textContent = 'Similaridade: ' + score.toFixed(4);
+  scoreEl.className = 'score ' + (dec.match ? 'high' : 'low');
+  verdictEl.textContent = dec.match ? 'MATCH ✓' : 'SEM MATCH ✗';
+  verdictEl.className = 'verdict ' + (dec.match ? 'match' : 'no-match');
+  document.getElementById('match-details').textContent = `Threshold: ${dec.threshold} | Decisão baseada em similaridade Jaccard entre nomes`;
+  resultEl.className = 'result-box ' + (dec.match ? 'match' : 'no-match');
+  resultEl.hidden = false;
+}
+
+// --- Pipeline ---
+const SAMPLE_RECORDS = [
+  { id: 1, name: 'IBM' },
+  { id: 2, name: 'Apple Inc' },
+  { id: 3, name: 'Petrobras' },
+  { id: 4, name: 'OpenAI' },
+];
+
+const FALLBACK_PIPELINE = {
+  status: 'processed',
+  stats: { raw_total: 4, valid_total: 4, raw_dedup_total: 4, linked_total: 4, linked_dedup_total: 4, linked_success_total: 4, link_rate: 1.0, unique_entity_rate: 1.0 },
+  entities: [
+    { id: 1, name: 'IBM', _wikidata: { linked: true, confidence: 0.9, qid: 'Q37156' } },
+    { id: 2, name: 'Apple Inc', _wikidata: { linked: true, confidence: 0.9, qid: 'Q312' } },
+    { id: 3, name: 'Petrobras', _wikidata: { linked: true, confidence: 0.87, qid: 'Q133925' } },
+    { id: 4, name: 'OpenAI', _wikidata: { linked: true, confidence: 0.87, qid: 'Q55611589' } },
+  ],
+  graph: {
+    nodes: [
+      { id: 'entity:Q37156', type: 'entity', canonicalName: 'IBM' },
+      { id: 'entity:Q312', type: 'entity', canonicalName: 'Apple Inc' },
+      { id: 'entity:Q133925', type: 'entity', canonicalName: 'Petrobras' },
+      { id: 'entity:Q55611589', type: 'entity', canonicalName: 'OpenAI' },
+      { id: 'alias:ibm', type: 'alias', name: 'IBM' },
+      { id: 'alias:apple inc', type: 'alias', name: 'Apple Inc' },
+      { id: 'wikidata:Q37156', type: 'wikidata', qid: 'Q37156' },
+      { id: 'wikidata:Q312', type: 'wikidata', qid: 'Q312' },
+    ],
+    edges: [
+      { source: 'alias:ibm', target: 'entity:Q37156', type: 'alias_of' },
+      { source: 'entity:Q37156', target: 'wikidata:Q37156', type: 'same_as' },
+      { source: 'alias:apple inc', target: 'entity:Q312', type: 'alias_of' },
+      { source: 'entity:Q312', target: 'wikidata:Q312', type: 'same_as' },
+    ],
+    stats: { entities: 4, aliases: 4, wikidata: 4, edges: 8 }
+  }
+};
+
+async function runPipeline() {
+  const btn = document.getElementById('pipeline-btn');
+  const srcEl = document.getElementById('pipeline-source');
+  const resultEl = document.getElementById('pipeline-result');
+  const errorEl = document.getElementById('pipeline-error');
+  btn.disabled = true;
+  btn.textContent = 'Processando…';
+  resultEl.hidden = true;
+  errorEl.hidden = true;
+
+  try {
+    const res = await fetch(`${API}/v1/entities/pipeline`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ records: SAMPLE_RECORDS, confidence_threshold: 0.7 }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    srcEl.innerHTML = '<span class="tag-api">API ao vivo</span>';
+    showPipelineResult(data);
+  } catch {
+    srcEl.innerHTML = '<span class="tag-fallback">Fallback estático</span>';
+    showPipelineResult(FALLBACK_PIPELINE);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Rodar pipeline de exemplo';
+  }
+}
+
+function showPipelineResult(data) {
+  const stats = data.stats || {};
+  const statsEl = document.getElementById('pipeline-stats');
+  statsEl.innerHTML = [
+    ['Total', stats.raw_total],
+    ['Válidas', stats.valid_total],
+    ['Vinculadas', stats.linked_success_total],
+    ['Link Rate', (stats.link_rate || 0).toFixed(2)],
+  ].map(([lbl, num]) => `<div class="stat"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`).join('');
+
+  const tbody = document.getElementById('entities-tbody');
+  tbody.innerHTML = (data.entities || []).map(e => {
+    const wd = e._wikidata || {};
+    return `<tr>
+      <td>${e.name}</td>
+      <td>${wd.qid ? `<a href="https://www.wikidata.org/wiki/${wd.qid}" target="_blank" rel="noopener noreferrer">${wd.qid}</a>` : '-'}</td>
+      <td>${wd.confidence || '-'}</td>
+      <td style="color:${wd.linked ? 'var(--green)' : 'var(--muted)'}">${wd.linked ? 'Sim' : 'Não'}</td>
+    </tr>`;
+  }).join('');
+
+  const graph = data.graph || { nodes: [], edges: [] };
+  const nodeTbody = document.getElementById('nodes-tbody');
+  nodeTbody.innerHTML = graph.nodes.map(n => {
+    const cls = n.type === 'entity' ? 'pill-entity' : n.type === 'wikidata' ? 'pill-wikidata' : 'pill-alias';
+    const label = n.canonicalName || n.name || n.qid || n.id;
+    return `<tr><td style="font-size:.8rem;color:var(--muted)">${n.id}</td><td><span class="pill ${cls}">${n.type}</span></td><td>${label}</td></tr>`;
+  }).join('');
+
+  const edgeTbody = document.getElementById('edges-tbody');
+  edgeTbody.innerHTML = graph.edges.map(e =>
+    `<tr class="edge-row"><td>${e.source}</td><td style="color:var(--blue)">${e.type}</td><td>${e.target}</td></tr>`
+  ).join('');
+
+  document.getElementById('pipeline-result').hidden = false;
+}
+
+// --- Metrics ---
+async function loadMetrics() {
+  const srcEl = document.getElementById('metrics-result');
+  const pre = document.getElementById('metrics-pre');
+  try {
+    const res = await fetch(`${API}/v1/entities/metrics`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    pre.textContent = JSON.stringify(data, null, 2);
+  } catch {
+    pre.textContent = JSON.stringify({ issue: 'ISSUE-002', precisionTarget: 0.90, recallTarget: 0.85, fprMax: 0.05, note: 'fallback estático' }, null, 2);
+  }
+  srcEl.hidden = false;
+}
+</script>
 </body>
 </html>
