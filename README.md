@@ -4,6 +4,7 @@
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Status](https://img.shields.io/badge/Status-Production-brightgreen)
 ![API](https://img.shields.io/badge/API-REST%20JSON-orange)
+[![Run in Postman](https://run.pstmn.io/button.svg)](https://www.postman.com/lfsolucoes)
 
 Serviço de **resolução de entidades** que vincula registros de negócio (empresas, organizações, produtos) ao grafo de conhecimento do [Wikidata](https://www.wikidata.org), eliminando duplicatas e inconsistências de nomenclatura entre sistemas.
 
