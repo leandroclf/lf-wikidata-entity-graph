@@ -1,0 +1,574 @@
+openapi: 3.0.3
+info:
+  title: lf-wikidata-entity-graph API
+  description: |
+    API de resolução de entidades com vinculação ao Wikidata.
+
+    Este serviço permite identificar, comparar e vincular entidades de negócio
+    (empresas, organizações, produtos) ao grafo de conhecimento do Wikidata,
+    utilizando similaridade Jaccard por tokens de palavras.
+
+    ## Algoritmo
+
+    A similaridade entre dois nomes é calculada como a razão entre a interseção e
+    a união dos conjuntos de tokens (palavras) de cada nome, após normalização
+    (lowercase, remoção de espaços extras):
+
+    ```
+    Jaccard(A, B) = |tokens(A) ∩ tokens(B)| / |tokens(A) ∪ tokens(B)|
+    ```
+
+    O threshold padrão é **0.7** para vinculação Wikidata e **0.8** internamente
+    para decisão de match.
+
+  version: "1.0.0"
+  contact:
+    name: Leandro Freire
+    email: leandro.freire@hiveplace.com.br
+
+servers:
+  - url: https://lf-wikidata-entity-graph.onrender.com
+    description: Servidor de produção (Render)
+  - url: http://localhost:8000
+    description: Servidor local de desenvolvimento
+
+tags:
+  - name: Health
+    description: Verificação de disponibilidade do serviço
+  - name: Entity Matching
+    description: Comparação de nomes de entidades com candidatos Wikidata
+  - name: Pipeline
+    description: Pipeline completo de ingestão, deduplicação, vinculação e geração de grafo
+  - name: Metrics
+    description: Métricas de qualidade do sistema de matching
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Verificar saúde do serviço
+      description: Retorna o status atual do serviço. Utilizado por load balancers e sistemas de monitoramento.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Serviço operacional
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+                service: lf-wikidata-entity-graph
+
+  /sample:
+    get:
+      tags: [Health]
+      summary: Obter payload de exemplo
+      description: Retorna um payload de exemplo representando uma entidade Wikidata com metadados de geração.
+      operationId: getSample
+      responses:
+        "200":
+          description: Payload de exemplo gerado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SampleResponse"
+              example:
+                component: lf-wikidata-entity-graph
+                source: wikidata
+                status: ok
+                generatedAt: "2026-04-18T12:00:00+00:00"
+                transport: http
+                generatedAtHttp: "2026-04-18T12:00:00+00:00"
+
+  /v1/entities/match:
+    post:
+      tags: [Entity Matching]
+      summary: Encontrar melhor candidato para uma entidade
+      description: |
+        Recebe o nome de uma entidade e uma lista de candidatos com scores.
+        Seleciona o candidato de maior score e computa a similaridade Jaccard
+        entre o nome da entidade e o nome do candidato escolhido.
+
+        A decisão de match é tomada comparando o score calculado com o threshold
+        interno (padrão 0.8).
+      operationId: matchEntity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MatchRequest"
+            example:
+              entity_name: "Apple Inc"
+              candidates:
+                - name: "Apple Inc."
+                  id: "Q312"
+                  score: 0.92
+                - name: "Apple Records"
+                  id: "Q193704"
+                  score: 0.41
+      responses:
+        "200":
+          description: Resultado do matching
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchResponse"
+              example:
+                best_match:
+                  name: "Apple Inc."
+                  id: "Q312"
+                  score: 0.92
+                decision:
+                  score: 0.8
+                  threshold: 0.8
+                  match: true
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/entities/pipeline:
+    post:
+      tags: [Pipeline]
+      summary: Executar pipeline completo de resolução de entidades
+      description: |
+        Pipeline end-to-end que executa as seguintes etapas:
+
+        1. **Validação** — verifica campos obrigatórios (`id`, `name`)
+        2. **Deduplicação raw** — remove duplicatas por `id`
+        3. **Vinculação Wikidata** — atribui QID e score de confiança
+        4. **Deduplicação por QID** — agrupa por QID ou nome normalizado
+        5. **Geração de grafo** — cria nós (entity, alias, wikidata) e arestas
+        6. **Métricas baseline** — precisão alvo, cobertura, taxa de vinculação
+
+        O parâmetro `confidence_threshold` (padrão 0.7) controla o mínimo de
+        confiança para que uma entidade seja considerada vinculada ao Wikidata.
+      operationId: runPipeline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PipelineRequest"
+            example:
+              records:
+                - id: "r1"
+                  name: "Microsoft Corp"
+                  source: "crm"
+                - id: "r2"
+                  name: "Apple Inc"
+                  source: "erp"
+              confidence_threshold: 0.7
+      responses:
+        "200":
+          description: Resultado do pipeline
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PipelineResponse"
+              example:
+                status: processed
+                stats:
+                  raw_total: 2
+                  valid_total: 2
+                  raw_dedup_total: 2
+                  linked_total: 2
+                  linked_dedup_total: 2
+                  linked_success_total: 2
+                  link_rate: 1.0
+                  unique_entity_rate: 1.0
+                baseline:
+                  matchingPrecisionTarget: 0.9
+                  linkConfidenceAvg: 0.85
+                  entityResolutionCoverage: 1.0
+                entities:
+                  - id: "r1"
+                    name: "Microsoft Corp"
+                    source: "crm"
+                    _ingested_at: "2026-04-18T12:00:00+00:00"
+                    _source: "batch_ingest"
+                    _wikidata:
+                      linked: true
+                      confidence: 0.875
+                      qid: "Q82670"
+                graph:
+                  nodes:
+                    - id: "entity:Q82670"
+                      type: entity
+                      canonicalName: "Microsoft Corp"
+                      wikidataQid: "Q82670"
+                      linked: true
+                  edges:
+                    - source: "alias:microsoft corp"
+                      target: "entity:Q82670"
+                      type: alias_of
+                  stats:
+                    entities: 2
+                    aliases: 2
+                    wikidata: 2
+                    edges: 4
+                errors: []
+                processed_at: "2026-04-18T12:00:00+00:00"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/entities/metrics:
+    get:
+      tags: [Metrics]
+      summary: Obter métricas de qualidade do sistema
+      description: |
+        Retorna as metas de qualidade do sistema de resolução de entidades,
+        incluindo precisão alvo, recall alvo e taxa máxima de falsos positivos.
+        Referenciado pela issue ISSUE-002.
+      operationId: getMetrics
+      responses:
+        "200":
+          description: Métricas do sistema
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetricsResponse"
+              example:
+                issue: ISSUE-002
+                precisionTarget: 0.90
+                recallTarget: 0.85
+                fprMax: 0.05
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, service]
+      properties:
+        status:
+          type: string
+          example: ok
+          description: Estado do serviço
+        service:
+          type: string
+          example: lf-wikidata-entity-graph
+          description: Identificador do serviço
+
+    SampleResponse:
+      type: object
+      properties:
+        component:
+          type: string
+          example: lf-wikidata-entity-graph
+        source:
+          type: string
+          example: wikidata
+        status:
+          type: string
+          example: ok
+        generatedAt:
+          type: string
+          format: date-time
+        transport:
+          type: string
+          example: http
+        generatedAtHttp:
+          type: string
+          format: date-time
+
+    Candidate:
+      type: object
+      required: [name, score]
+      properties:
+        name:
+          type: string
+          description: Nome do candidato Wikidata
+          example: "Apple Inc."
+        id:
+          type: string
+          description: QID Wikidata (ex. Q312)
+          example: "Q312"
+        score:
+          type: number
+          format: float
+          description: Score de similaridade do candidato (0.0 a 1.0)
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.92
+
+    MatchRequest:
+      type: object
+      required: [entity_name, candidates]
+      properties:
+        entity_name:
+          type: string
+          description: Nome da entidade a ser comparada
+          example: "Apple Inc"
+        candidates:
+          type: array
+          description: Lista de candidatos com scores
+          items:
+            $ref: "#/components/schemas/Candidate"
+
+    MatchDecision:
+      type: object
+      properties:
+        score:
+          type: number
+          format: float
+          description: Similaridade Jaccard calculada entre entity_name e nome do best_match
+          example: 0.8
+        threshold:
+          type: number
+          format: float
+          description: Threshold utilizado para decisão (padrão 0.8)
+          example: 0.8
+        match:
+          type: boolean
+          description: true se score >= threshold
+          example: true
+
+    MatchResponse:
+      type: object
+      properties:
+        best_match:
+          $ref: "#/components/schemas/Candidate"
+          nullable: true
+        decision:
+          $ref: "#/components/schemas/MatchDecision"
+
+    EntityRecord:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          description: Identificador único do registro
+          example: "r1"
+        name:
+          type: string
+          description: Nome da entidade
+          example: "Microsoft Corp"
+        source:
+          type: string
+          description: Sistema de origem do registro (ex. crm, erp)
+          example: "crm"
+
+    WikidataMeta:
+      type: object
+      properties:
+        linked:
+          type: boolean
+          description: Indica se a entidade foi vinculada ao Wikidata
+        confidence:
+          type: number
+          format: float
+          description: Score de confiança da vinculação (0.0 a 1.0)
+        qid:
+          type: string
+          nullable: true
+          description: QID Wikidata atribuído (null se não vinculado)
+          example: "Q82670"
+
+    LinkedEntity:
+      allOf:
+        - $ref: "#/components/schemas/EntityRecord"
+        - type: object
+          properties:
+            _ingested_at:
+              type: string
+              format: date-time
+            _source:
+              type: string
+              example: batch_ingest
+            _wikidata:
+              $ref: "#/components/schemas/WikidataMeta"
+
+    GraphNode:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "entity:Q82670"
+        type:
+          type: string
+          enum: [entity, alias, wikidata]
+        canonicalName:
+          type: string
+        normalizedName:
+          type: string
+        wikidataQid:
+          type: string
+          nullable: true
+        linked:
+          type: boolean
+        qid:
+          type: string
+          description: Apenas para nós do tipo wikidata
+        name:
+          type: string
+          description: Apenas para nós do tipo alias
+
+    GraphEdge:
+      type: object
+      properties:
+        source:
+          type: string
+          example: "alias:microsoft corp"
+        target:
+          type: string
+          example: "entity:Q82670"
+        type:
+          type: string
+          enum: [alias_of, same_as]
+
+    EntityGraph:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphNode"
+        edges:
+          type: array
+          items:
+            $ref: "#/components/schemas/GraphEdge"
+        stats:
+          type: object
+          properties:
+            entities:
+              type: integer
+            aliases:
+              type: integer
+            wikidata:
+              type: integer
+            edges:
+              type: integer
+
+    PipelineStats:
+      type: object
+      properties:
+        raw_total:
+          type: integer
+          description: Total de registros recebidos
+        valid_total:
+          type: integer
+          description: Registros válidos após validação
+        raw_dedup_total:
+          type: integer
+          description: Registros após deduplicação por id
+        linked_total:
+          type: integer
+          description: Registros após vinculação Wikidata
+        linked_dedup_total:
+          type: integer
+          description: Registros após deduplicação por QID/nome
+        linked_success_total:
+          type: integer
+          description: Registros efetivamente vinculados ao Wikidata
+        link_rate:
+          type: number
+          format: float
+          description: Taxa de vinculação bem-sucedida
+        unique_entity_rate:
+          type: number
+          format: float
+          description: Taxa de entidades únicas
+
+    PipelineRequest:
+      type: object
+      required: [records]
+      properties:
+        records:
+          type: array
+          description: Lista de registros de entidades a processar
+          items:
+            $ref: "#/components/schemas/EntityRecord"
+        confidence_threshold:
+          type: number
+          format: float
+          description: Threshold mínimo de confiança para vinculação Wikidata (padrão 0.7)
+          default: 0.7
+          minimum: 0.0
+          maximum: 1.0
+          example: 0.7
+
+    PipelineResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: processed
+        stats:
+          $ref: "#/components/schemas/PipelineStats"
+        baseline:
+          type: object
+          properties:
+            matchingPrecisionTarget:
+              type: number
+              format: float
+              example: 0.9
+            linkConfidenceAvg:
+              type: number
+              format: float
+            entityResolutionCoverage:
+              type: number
+              format: float
+        entities:
+          type: array
+          items:
+            $ref: "#/components/schemas/LinkedEntity"
+        graph:
+          $ref: "#/components/schemas/EntityGraph"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              record_id:
+                type: string
+              errors:
+                type: array
+                items:
+                  type: string
+        processed_at:
+          type: string
+          format: date-time
+
+    MetricsResponse:
+      type: object
+      properties:
+        issue:
+          type: string
+          description: Identificador da issue de rastreamento
+          example: ISSUE-002
+        precisionTarget:
+          type: number
+          format: float
+          description: Meta de precisão do sistema (0.0 a 1.0)
+          example: 0.90
+        recallTarget:
+          type: number
+          format: float
+          description: Meta de recall do sistema (0.0 a 1.0)
+          example: 0.85
+        fprMax:
+          type: number
+          format: float
+          description: Taxa máxima aceitável de falsos positivos
+          example: 0.05
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: not_found
+        path:
+          type: string
+          example: /v1/entities/unknown
+
+  responses:
+    NotFound:
+      description: Endpoint não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

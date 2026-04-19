@@ -1,0 +1,322 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "lf-wikidata-entity-graph",
+    "description": "Coleção completa para a API de resolução de entidades com vinculação ao Wikidata.\n\nO serviço utiliza similaridade Jaccard por tokens de palavras para comparar nomes de entidades e vinculá-las ao grafo de conhecimento do Wikidata.\n\n**URL de produção:** https://lf-wikidata-entity-graph.onrender.com\n\nImporte também o environment `postman_environment.json` para configurar `{{base_url}}` e `{{base_url_local}}`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://lf-wikidata-entity-graph.onrender.com",
+      "type": "string",
+      "description": "URL base de produção"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "description": "Endpoints para verificação de disponibilidade e sanidade do serviço.",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Verifica se o serviço está operacional. Retorna `{\"status\":\"ok\",\"service\":\"lf-wikidata-entity-graph\"}`.\n\nUtilizado por load balancers, healthchecks do Render e sistemas de monitoramento externo."
+          },
+          "response": [
+            {
+              "name": "Serviço operacional",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/health",
+                  "host": ["{{base_url}}"],
+                  "path": ["health"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\"status\":\"ok\",\"service\":\"lf-wikidata-entity-graph\"}"
+            }
+          ]
+        },
+        {
+          "name": "GET /sample",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/sample",
+              "host": ["{{base_url}}"],
+              "path": ["sample"]
+            },
+            "description": "Retorna um payload de exemplo com metadados de uma entidade Wikidata. Útil para validar a conectividade e o formato das respostas da API."
+          },
+          "response": [
+            {
+              "name": "Payload de exemplo",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/sample",
+                  "host": ["{{base_url}}"],
+                  "path": ["sample"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\"component\":\"lf-wikidata-entity-graph\",\"source\":\"wikidata\",\"status\":\"ok\",\"generatedAt\":\"2026-04-18T12:00:00+00:00\",\"transport\":\"http\",\"generatedAtHttp\":\"2026-04-18T12:00:00+00:00\"}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Entity Matching",
+      "description": "Endpoint para comparar um nome de entidade com uma lista de candidatos Wikidata.\n\nO algoritmo seleciona o candidato de maior score e calcula a similaridade Jaccard entre o nome da entidade e o nome do melhor candidato.",
+      "item": [
+        {
+          "name": "POST /v1/entities/match — Apple Inc",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entity_name\": \"Apple Inc\",\n  \"candidates\": [\n    {\n      \"name\": \"Apple Inc.\",\n      \"id\": \"Q312\",\n      \"score\": 0.92\n    },\n    {\n      \"name\": \"Apple Records\",\n      \"id\": \"Q193704\",\n      \"score\": 0.41\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/entities/match",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "entities", "match"]
+            },
+            "description": "Encontra o melhor candidato para \"Apple Inc\" entre os candidatos fornecidos.\n\nO sistema seleciona o candidato com maior `score` (Apple Inc. com 0.92) e calcula a similaridade Jaccard entre \"Apple Inc\" e \"Apple Inc.\".\n\nComo ambos compartilham os tokens [\"apple\", \"inc\"], a similaridade resultante determina se houve match (threshold interno: 0.8)."
+          },
+          "response": [
+            {
+              "name": "Match encontrado",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"entity_name\": \"Apple Inc\",\n  \"candidates\": [\n    {\"name\": \"Apple Inc.\", \"id\": \"Q312\", \"score\": 0.92},\n    {\"name\": \"Apple Records\", \"id\": \"Q193704\", \"score\": 0.41}\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/v1/entities/match",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "entities", "match"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\"best_match\":{\"name\":\"Apple Inc.\",\"id\":\"Q312\",\"score\":0.92},\"decision\":{\"score\":1.0,\"threshold\":0.8,\"match\":true}}"
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/entities/match — Sem candidatos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entity_name\": \"Unknown Corp\",\n  \"candidates\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/entities/match",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "entities", "match"]
+            },
+            "description": "Caso sem candidatos. O sistema retorna `best_match: null` e decisão com score 0.0, indicando que não houve match."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Pipeline",
+      "description": "Pipeline completo de resolução de entidades: validação → deduplicação → vinculação Wikidata → geração de grafo.\n\nAceita um lote de registros e retorna entidades vinculadas, grafo de relacionamentos e métricas baseline.",
+      "item": [
+        {
+          "name": "POST /v1/entities/pipeline — Lote básico",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"records\": [\n    {\n      \"id\": \"r1\",\n      \"name\": \"Microsoft Corp\",\n      \"source\": \"crm\"\n    },\n    {\n      \"id\": \"r2\",\n      \"name\": \"Apple Inc\",\n      \"source\": \"erp\"\n    }\n  ],\n  \"confidence_threshold\": 0.7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/entities/pipeline",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "entities", "pipeline"]
+            },
+            "description": "Processa um lote de 2 entidades pelo pipeline completo.\n\nEtapas executadas:\n1. Validação dos campos obrigatórios (id, name)\n2. Deduplicação por id\n3. Vinculação ao Wikidata com confidence_threshold=0.7\n4. Deduplicação por QID/nome normalizado\n5. Construção do grafo de entidades\n6. Cálculo de métricas baseline"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /v1/entities/pipeline — Deduplicação",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"records\": [\n    {\n      \"id\": \"r1\",\n      \"name\": \"Microsoft Corp\",\n      \"source\": \"crm\"\n    },\n    {\n      \"id\": \"r1\",\n      \"name\": \"Microsoft Corp\",\n      \"source\": \"erp\"\n    },\n    {\n      \"id\": \"r2\",\n      \"name\": \"Apple Inc\",\n      \"source\": \"crm\"\n    }\n  ],\n  \"confidence_threshold\": 0.7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/entities/pipeline",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "entities", "pipeline"]
+            },
+            "description": "Demonstra a deduplicação: 3 registros enviados, mas r1 aparece duplicado. O pipeline retorna `raw_total: 3` e `raw_dedup_total: 2` após deduplicação por id."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /v1/entities/pipeline — Threshold alto (0.9)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"records\": [\n    {\n      \"id\": \"r1\",\n      \"name\": \"X\",\n      \"source\": \"crm\"\n    },\n    {\n      \"id\": \"r2\",\n      \"name\": \"Microsoft Corporation\",\n      \"source\": \"crm\"\n    }\n  ],\n  \"confidence_threshold\": 0.9\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/entities/pipeline",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "entities", "pipeline"]
+            },
+            "description": "Threshold alto (0.9) resulta em menos vinculações ao Wikidata. Entidades com nomes curtos como \"X\" têm confiança calculada menor e podem não atingir o threshold."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Metrics",
+      "description": "Endpoint para consulta das metas de qualidade do sistema de entity matching.",
+      "item": [
+        {
+          "name": "GET /v1/entities/metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/entities/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "entities", "metrics"]
+            },
+            "description": "Retorna as métricas de qualidade definidas para o sistema (ISSUE-002):\n\n- `precisionTarget`: Precisão mínima alvo (0.90 = 90%)\n- `recallTarget`: Recall mínimo alvo (0.85 = 85%)\n- `fprMax`: Taxa máxima de falsos positivos (0.05 = 5%)"
+          },
+          "response": [
+            {
+              "name": "Métricas do sistema",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/v1/entities/metrics",
+                  "host": ["{{base_url}}"],
+                  "path": ["v1", "entities", "metrics"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\"issue\":\"ISSUE-002\",\"precisionTarget\":0.90,\"recallTarget\":0.85,\"fprMax\":0.05}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
